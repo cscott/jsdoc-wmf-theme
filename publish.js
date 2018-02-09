@@ -318,7 +318,7 @@ function buildMemberNav(items, itemHeading, itemsSeen, linktoFn) {
             var displayName;
 
             if ( !hasOwnProp.call(item, 'longname') ) {
-                itemsNav += '<li>' + linktoFn('', item.name) + '</li>';
+                itemsNav += '<li class="nav__sub-item">' + linktoFn('', item.name) + '</li>';
             }
             else if ( !hasOwnProp.call(itemsSeen, item.longname) ) {
                 if (env.conf.templates.default.useLongnameInNav) {
@@ -326,14 +326,14 @@ function buildMemberNav(items, itemHeading, itemsSeen, linktoFn) {
                 } else {
                     displayName = item.name;
                 }
-                itemsNav += '<li>' + linktoFn(item.longname, displayName.replace(/\b(module|event):/g, '')) + '</li>';
+                itemsNav += '<li class="nav__sub-item">' + linktoFn(item.longname, displayName.replace(/\b(module|event):/g, '')) + '</li>';
 
                 itemsSeen[item.longname] = true;
             }
         });
 
         if (itemsNav !== '') {
-            nav += '<h3>' + itemHeading + '</h3><ul>' + itemsNav + '</ul>';
+            nav += '<li class="nav__item"><a>' + itemHeading + '</a><ul class="nav__sub-items">' + itemsNav + '</ul></li>';
         }
     }
 
@@ -364,7 +364,7 @@ function linktoExternal(longName, name) {
  */
 function buildNav(members) {
     var globalNav;
-    var nav = '<h2><a href="index.html">Home</a></h2>';
+    var nav = '<ol><li class="nav__item"><a href="index.html">Home</a></li>';
     var seen = {};
     var seenTutorials = {};
 
@@ -396,6 +396,7 @@ function buildNav(members) {
         }
     }
 
+    nav += "</ol>";
     return nav;
 }
 
@@ -432,6 +433,7 @@ exports.publish = function(taffyData, opts, tutorials) {
 
     conf = env.conf.templates || {};
     conf.default = conf.default || {};
+    conf.wmf = conf.wmf || {};
 
     templatePath = path.normalize(opts.template);
     view = new template.Template( path.join(templatePath, 'tmpl') );
@@ -500,7 +502,15 @@ exports.publish = function(taffyData, opts, tutorials) {
     // update outdir if necessary, then create outdir
     packageInfo = ( find({kind: 'package'}) || [] )[0];
     if (packageInfo && packageInfo.name) {
-        outdir = path.join( outdir, packageInfo.name, (packageInfo.version || '') );
+        env.conf.templates.wmf.maintitle =
+            env.conf.templates.wmf.maintitle || packageInfo.name;
+        if (packageInfo.repository && packageInfo.repository.url) {
+            env.conf.templates.wmf.repository =
+                env.conf.templates.wmf.repository || packageInfo.repository.url;
+        }
+        if (env.conf.templates.wmf.useVersionedDirectory) {
+            outdir = path.join( outdir, packageInfo.name, (packageInfo.version || '') );
+        }
     }
     fs.mkPath(outdir);
 
@@ -675,6 +685,7 @@ exports.publish = function(taffyData, opts, tutorials) {
     // TODO: move the tutorial functions to templateHelper.js
     function generateTutorial(title, tutorial, filename) {
         var tutorialData = {
+            env: env,
             title: title,
             header: tutorial.title,
             content: tutorial.parse(),

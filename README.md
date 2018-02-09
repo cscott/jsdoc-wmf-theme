@@ -24,8 +24,10 @@ In your `jsdoc.json` file, add a template option.
 ## Options
 This theme supports the following options:
 ```
-{
+"templates": {
     "wmf": {
+        "maintitle": [string, overrides name from package.json],
+        "repository": [string, overrides repo from package.json]
     }
 }
 ```
