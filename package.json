@@ -1,0 +1,31 @@
+{
+  "name": "jsdoc-wmf-theme",
+  "version": "0.0.1",
+  "description": "A template theme for JSDoc 3 inspired by the Wikimedia style guide",
+  "main": "publish.js",
+  "scripts": {
+    "test": "jsdoc -c fixtures/fixtures.conf.json"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/cscott/jsdoc-wmf-theme.git"
+  },
+  "keywords": [
+    "jsdoc",
+    "template"
+  ],
+  "author": "C. Scott Ananian <cscott@cscott.net>",
+  "contributors": [
+    {
+      "url": "https://github.com/cscott/jsdoc-wmf-theme/graphs/contributors"
+    }
+  ],
+  "license": "Apache-2.0",
+  "bugs": {
+    "url": "https://github.com/cscott/jsdoc-wmf-theme/issues"
+  },
+  "homepage": "https://github.com/cscott/jsdoc-wmf-theme#readme",
+  "dependencies": {
+    "taffydb": "^2.6.2"
+  }
+}
