@@ -10,15 +10,39 @@ var taffy = require('taffydb').taffy;
 var template = require('jsdoc/template');
 var util = require('util');
 
+var resolveLinkFilename = '<unknown>';
+
 var htmlsafe = helper.htmlsafe;
-var linkto = helper.linkto;
+var linkto = function(longname, linkText, cssClass, fragmentId) {
+    if (longname==='any') {
+        return longname;
+    }
+    if (/^(null|undefined|true|false)$/.test(longname)) {
+        return '<code>'+longname+'</code>';
+    }
+    if (/^(boolean|function|number|string)$/.test(longname)) {
+        longname = longname[0].toUpperCase() + longname.slice(1);
+    }
+    var r = helper.linkto(longname, linkText, cssClass, fragmentId);
+    if (!/^(<a href=|<p|{@)/.test(r)) {
+        logger.warn('Unknown link %s in %s', longname, resolveLinkFilename);
+    }
+    return r;
+};
 var resolveAuthorLinks = helper.resolveAuthorLinks;
 var hasOwnProp = Object.prototype.hasOwnProperty;
 
 var data;
 var view;
+var aliases = {};
 
 var outdir = path.normalize(env.opts.destination);
+
+function addAlias(name, url) {
+  if (helper.longnameToUrl[name]) { return; }
+  helper.registerLink(name, url);
+  aliases[name] = true;
+}
 
 function find(spec) {
     return helper.find(data, spec);
@@ -234,11 +258,14 @@ function generate(title, docs, filename, resolveLinks) {
     };
 
     outpath = path.join(outdir, filename);
+    // shortpath / name / longname in docData.docs[x]
+    resolveLinkFilename = docData.title || filename;
     html = view.render('container.tmpl', docData);
 
     if (resolveLinks) {
         html = helper.resolveLinks(html); // turn {@link foo} into <a href="foodoc.html">foo</a>
     }
+    resolveLinkFilename = '<unknown>';
 
     fs.writeFileSync(outpath, html, 'utf8');
 }
@@ -446,6 +473,12 @@ exports.publish = function(taffyData, opts, tutorials) {
     globalUrl = helper.getUniqueFilename('global');
     helper.registerLink('global', globalUrl);
 
+    // Manually-requested links (to external documentation)
+    conf.wmf.linkMap = conf.wmf.linkMap || {};
+    Object.keys(conf.wmf.linkMap).forEach(function(longname) {
+        addAlias(longname, conf.wmf.linkMap[longname]);
+    });
+
     // set up templating
     view.layout = conf.default.layoutFile ?
         path.getResourcePath(path.dirname(conf.default.layoutFile),
@@ -570,6 +603,30 @@ exports.publish = function(taffyData, opts, tutorials) {
         }
     });
 
+    // Add synthetic names
+    var count = {};
+    var shorten = function(longname) {
+        var pieces = longname.split('~', 2);
+        return pieces.length < 2 ? null : pieces[1];
+    };
+    // Find ambiguous shortnames
+    Object.keys(helper.longnameToUrl).forEach(function(longname) {
+        var s = shorten(longname);
+        if (s) {
+            // Prefix '$' so we don't conflict w/ built-ins like 'prototype'
+            count['$'+s] = (count['$'+s] || 0) + 1;
+        }
+    });
+    // Ok, add non-ambiguous shortnames
+    Object.keys(helper.longnameToUrl).forEach(function(longname) {
+        var s = shorten(longname);
+        if (s && count['$'+s] === 1) {
+            addAlias(s, helper.longnameToUrl[longname]);
+        } else if (s) {
+            logger.warn('Ambiguous shortname:', s);
+        }
+    });
+
     data().each(function(doclet) {
         var url = helper.longnameToUrl[doclet.longname];
 
@@ -580,11 +637,13 @@ exports.publish = function(taffyData, opts, tutorials) {
             doclet.id = doclet.name;
         }
 
+        resolveLinkFilename = doclet.longname;
         if ( needsSignature(doclet) ) {
             addSignatureParams(doclet);
             addSignatureReturns(doclet);
             addAttribs(doclet);
         }
+        resolveLinkFilename = '<unknown>';
     });
 
     // do this after the urls have all been generated
@@ -650,6 +709,7 @@ exports.publish = function(taffyData, opts, tutorials) {
     interfaces = taffy(members.interfaces);
 
     Object.keys(helper.longnameToUrl).forEach(function(longname) {
+        if (hasOwnProp.call(aliases, longname)) { return; /* skip alias */ }
         var myClasses = helper.find(classes, {longname: longname});
         var myExternals = helper.find(externals, {longname: longname});
         var myInterfaces = helper.find(interfaces, {longname: longname});
