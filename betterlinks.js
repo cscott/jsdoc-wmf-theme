@@ -49,7 +49,18 @@ function shouldProcessString(tagName, text) {
     return shouldProcess;
 }
 
+function expandModule(name, longname) {
+    return name.replace(/^[:~]/, function() {
+        return longname.replace(/~.*/, '') + '~';
+    });
+}
+
 function process(doclet, longname) {
+    if (Array.isArray(doclet.augments)) {
+        doclet.augments = doclet.augments.map(function(name) {
+            return expandModule(name, longname);
+        });
+    }
     tags.forEach(function(tag) {
         if ( !hasOwnProp.call(doclet, tag) ) {
             return;
