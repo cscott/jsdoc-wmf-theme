@@ -1,5 +1,6 @@
 'use strict';
 
+var domino = require('domino');
 var doop = require('jsdoc/util/doop');
 var env = require('jsdoc/env');
 var fs = require('jsdoc/fs');
@@ -254,6 +255,7 @@ function generate(title, docs, filename, resolveLinks) {
     docData = {
         env: env,
         title: title,
+        filename: filename,
         docs: docs
     };
 
@@ -335,17 +337,21 @@ function attachModuleSymbols(doclets, modules) {
     });
 }
 
-function buildMemberNav(items, itemHeading, itemsSeen, linktoFn) {
+function buildMemberNav(parent, items, itemHeading, itemsSeen, linktoFn) {
     var nav = '';
 
     if (items.length) {
-        var itemsNav = '';
+
+        var li = makeNavItem(parent.ownerDocument, {tag:'a',title:itemHeading});
+        var ul = parent.ownerDocument.createElement('ul');
+        ul.classList.add('nav__sub-items');
+        li.appendChild(ul);
 
         items.forEach(function(item) {
             var displayName;
 
             if ( !hasOwnProp.call(item, 'longname') ) {
-                itemsNav += '<li class="nav__sub-item">' + linktoFn('', item.name) + '</li>';
+                addNavItem(ul, {sub:true,html:linktoFn('', item.name)});
             }
             else if ( !hasOwnProp.call(itemsSeen, item.longname) ) {
                 if (env.conf.templates.default.useLongnameInNav) {
@@ -353,14 +359,14 @@ function buildMemberNav(items, itemHeading, itemsSeen, linktoFn) {
                 } else {
                     displayName = item.name;
                 }
-                itemsNav += '<li class="nav__sub-item">' + linktoFn(item.longname, displayName.replace(/\b(module|event):/g, '')) + '</li>';
+                addNavItem(ul,{sub:true,html:linktoFn(item.longname, displayName.replace(/\b(module|event):/g, ''))});
 
                 itemsSeen[item.longname] = true;
             }
         });
 
-        if (itemsNav !== '') {
-            nav += '<li class="nav__item"><a>' + itemHeading + '</a><ul class="nav__sub-items">' + itemsNav + '</ul></li>';
+        if (ul.firstChild) {
+            parent.appendChild(li);
         }
     }
 
@@ -374,6 +380,25 @@ function linktoTutorial(longName, name) {
 function linktoExternal(longName, name) {
     return linkto(longName, name.replace(/(^"|"$)/g, ''));
 }
+
+function makeNavItem(doc, data) {
+    var li = doc.createElement('li');
+    li.classList.add(data.sub ? 'nav__sub-item' : 'nav__item');
+    if (data.tag === 'a') {
+        var a = doc.createElement('a');
+        li.appendChild(a);
+        if (data.href) { a.setAttribute('href', data.href); }
+        a.textContent = data.title;
+    } else if (typeof(data.html)==='string') {
+        li.innerHTML = data.html;
+    }
+    return li;
+};
+
+function addNavItem(parent, data) {
+    parent.appendChild(makeNavItem(parent.ownerDocument, data));
+    return parent;
+};
 
 /**
  * Create the navigation sidebar.
@@ -391,40 +416,56 @@ function linktoExternal(longName, name) {
  */
 function buildNav(members) {
     var globalNav;
-    var nav = '<ol><li class="nav__item"><a href="index.html">Home</a></li>';
+    var doc = domino.createDocument();
+    var nav = doc.createElement('ol');
+    doc.body.appendChild(nav);
+    addNavItem(nav, { tag: 'a', href: 'index.html', title: 'Home' });
     var seen = {};
     var seenTutorials = {};
 
-    nav += buildMemberNav(members.modules, 'Modules', {}, linkto);
-    nav += buildMemberNav(members.externals, 'Externals', seen, linktoExternal);
-    nav += buildMemberNav(members.namespaces, 'Namespaces', seen, linkto);
-    nav += buildMemberNav(members.classes, 'Classes', seen, linkto);
-    nav += buildMemberNav(members.interfaces, 'Interfaces', seen, linkto);
-    nav += buildMemberNav(members.events, 'Events', seen, linkto);
-    nav += buildMemberNav(members.mixins, 'Mixins', seen, linkto);
-    nav += buildMemberNav(members.tutorials, 'Tutorials', seenTutorials, linktoTutorial);
+    buildMemberNav(nav, members.modules, 'Modules', {}, linkto);
+    buildMemberNav(nav, members.externals, 'Externals', seen, linktoExternal);
+    buildMemberNav(nav, members.namespaces, 'Namespaces', seen, linkto);
+    buildMemberNav(nav, members.classes, 'Classes', seen, linkto);
+    buildMemberNav(nav, members.interfaces, 'Interfaces', seen, linkto);
+    buildMemberNav(nav, members.events, 'Events', seen, linkto);
+    buildMemberNav(nav, members.mixins, 'Mixins', seen, linkto);
+    buildMemberNav(nav, members.tutorials, 'Tutorials', seenTutorials, linktoTutorial);
 
-    if (members.globals.length) {
-        globalNav = '';
+    if (members.globals.length && false) {
+        globalNav = doc.createElement('ul');
 
         members.globals.forEach(function(g) {
             if ( g.kind !== 'typedef' && !hasOwnProp.call(seen, g.longname) ) {
-                globalNav += '<li>' + linkto(g.longname, g.name) + '</li>';
+                addNavItem(globalNav, {sub:true,html:linkto(g.longname, g.name)});
             }
             seen[g.longname] = true;
         });
 
-        if (!globalNav) {
+        var h3 = doc.createElement(h3);
+        if (!globalNav.firstChild) {
             // turn the heading into a link so you can actually get to the global page
-            nav += '<h3>' + linkto('global', 'Global') + '</h3>';
+            h3.innerHTML = linkto('global', 'Global');
+            nav.appendChild(h3);
         }
         else {
-            nav += '<h3>Global</h3><ul>' + globalNav + '</ul>';
+            h3.textContent = 'Global';
+            nav.appendChild(h3);
+            nav.appendChild(globalNav);
         }
     }
 
-    nav += "</ol>";
-    return nav;
+    return function(filename) {
+        var nav2 = nav.cloneNode(true);
+        var el = nav2.querySelector('a[href="'+filename+'"]');
+        while (el) {
+            if (el.tagName==='LI') {
+                el.classList.add('is-on');
+            }
+            el = el.parentNode;
+        }
+        return nav2.outerHTML;
+    };
 }
 
 /**
@@ -759,6 +800,7 @@ exports.publish = function(taffyData, opts, tutorials) {
         var tutorialData = {
             env: env,
             title: title,
+            filename: filename,
             header: tutorial.title,
             content: tutorial.parse(),
             children: tutorial.children

@@ -43,7 +43,7 @@ document.documentElement.className = document.documentElement.className.replace(
 			<div class="col col--start">
 				<input type="checkbox" id="trigger--nav-main" class="trigger--nav-main">
 				<nav id="nav--main" class="nav nav--main" role="navigation">
-					<?js= this.nav ?>
+					<?js= this.nav(filename) ?>
 				</nav>
 			</div>
 			<div class="col col--end">
@@ -69,7 +69,11 @@ document.documentElement.className = document.documentElement.className.replace(
 var arr = function(aa) { return Array.prototype.slice.call(aa); };
 arr(document.querySelectorAll("nav > ol > li")).map(function(el) {
   el.addEventListener('click', function(event) {
-    arr(document.querySelectorAll("nav li.is-on")).map(function(el2) {
+    if (el.classList.contains('is-on')) {
+      el.classList.remove('is-on');
+      return;
+    }
+    arr(document.querySelectorAll("nav li.nav__item.is-on")).map(function(el2) {
       el2.classList.remove('is-on');
     });
     el.classList.add('is-on');
