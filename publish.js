@@ -547,6 +547,18 @@ exports.publish = function(taffyData, opts, tutorials) {
     }
     fs.mkPath(outdir);
 
+    // Copy the WMF style guide files to outdir
+    [path.join('css','build'),'js','fonts'].forEach(function(d) {
+        fromDir = path.join(templatePath, 'WikimediaUI-Style-Guide', d);
+        fs.ls(fromDir, 3).forEach(function(fileName) {
+            var toDir = fs.toDir(
+                fileName.replace(fromDir, path.join(outdir, 'wmf', d))
+            );
+            fs.mkPath(toDir);
+            fs.copyFileSync(fileName, toDir);
+        });
+    });
+
     // copy the template's static files to outdir
     fromDir = path.join(templatePath, 'static');
     staticFiles = fs.ls(fromDir, 3);
