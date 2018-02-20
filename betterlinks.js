@@ -2,6 +2,7 @@
  * Add support for {@link .shortName} and {@link #shortName}, as well
  * as link-ifying URLs.
  */
+var env = require('jsdoc/env');
 
 var hasOwnProp = Object.prototype.hasOwnProperty;
 var tags = [
@@ -35,6 +36,16 @@ function expandLinks (text, longname) {
         }
         return '{@link '+match+'}';
     });
+    // Link up phabricator tickets.  The default is WMF-specific, and so
+    // should probably be tweaked if this theme were to be more generally
+    // used.
+    var conf = (env.conf.templates && env.conf.templates.betterlinks) || {};
+    var phabBase = conf.phabricator || 'https://phabricator.wikimedia.org/';
+    if (/^http/.test(phabBase)) {
+        text = text.replace(/\bT\d+\b/g, function(task) {
+            return '{@link ' + phabBase + task + ' ' + task + '}';
+        });
+    }
     return text;
 }
 
