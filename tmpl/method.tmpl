@@ -2,21 +2,28 @@
 var data = obj;
 var self = this;
 ?>
+<div>
 <?js if (data.kind !== 'module' && !data.hideconstructor) { ?>
     <?js if (data.kind === 'class' && data.classdesc) { ?>
     <h2>Constructor</h2>
     <?js } ?>
 
     <?js if (data.kind !== 'namespace') { ?>
+    <?js= self.partial('toggle.tmpl', { id: id }) ?>
     <h4 class="name" id="<?js= id ?>"><?js= data.attribs + (kind === 'class' ? 'new ' : '') +
     name + (data.signature || '') ?></h4>
     <?js } ?>
 
+<div class="summary">
     <?js if (data.summary) { ?>
-    <p class="summary"><?js= summary ?></p>
+    <?js= summary ?>
+    <?js } else { ?>
+    ...
     <?js } ?>
+</div>
 <?js } ?>
 
+<div class="long">
 <?js if (data.kind !== 'module' && data.description && !data.hideconstructor) { ?>
 <div class="description">
     <?js= data.description ?>
@@ -129,3 +136,5 @@ var self = this;
     <h5>Example<?js= examples.length > 1? 's':'' ?></h5>
     <?js= this.partial('examples.tmpl', examples) ?>
 <?js } ?>
+</div>
+</div>
