@@ -158,3 +158,6 @@
 th { border-right: 1px solid #aaa; }
 tr > th:last-child { border-right: 1px solid #ddd; }
 
+/* override navbox styling from parent which prevents collapsing open li */
+.nav--main .nav__item > a { cursor: pointer; }
+.nav--main .is-on > a { pointer-events: inherit; }

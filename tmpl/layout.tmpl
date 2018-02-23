@@ -67,16 +67,18 @@ document.documentElement.className = document.documentElement.className.replace(
 
 <script>
 var arr = function(aa) { return Array.prototype.slice.call(aa); };
-arr(document.querySelectorAll("nav > ol > li")).map(function(el) {
+arr(document.querySelectorAll("nav > ol > li a:not([href])")).map(function(el) {
+  var li = el;
+  while (li && li.tagName !== 'LI') { li = li.parentNode; }
   el.addEventListener('click', function(event) {
-    if (el.classList.contains('is-on')) {
-      el.classList.remove('is-on');
+    if (li.classList.contains('is-on')) {
+      li.classList.remove('is-on');
       return;
     }
     arr(document.querySelectorAll("nav li.nav__item.is-on")).map(function(el2) {
       el2.classList.remove('is-on');
     });
-    el.classList.add('is-on');
+    li.classList.add('is-on');
   });
 });
 </script>
